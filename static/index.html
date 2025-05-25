@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ML CSV Predictor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #fafafa;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #ddd;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+    input[type="file"] {
+      margin: 15px 0;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+    #result {
+      background: #f3f3f3;
+      padding: 15px;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      border-radius: 5px;
+      min-height: 80px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Upload CSV File for Prediction</h1>
+
+  <input type="file" id="csvFile" accept=".csv,.xls,.xlsx" />
+  <br />
+  <button id="predictBtn" onclick="uploadCSV()" disabled>Predict</button>
+
+  <h2>Prediction Result</h2>
+  <pre id="result">No prediction yet.</pre>
+
+  <script>
+    const fileInput = document.getElementById("csvFile");
+    const predictBtn = document.getElementById("predictBtn");
+    const resultArea = document.getElementById("result");
+
+    // Enable Predict button only when a file is selected
+    fileInput.addEventListener("change", () => {
+      predictBtn.disabled = !fileInput.files.length;
+      resultArea.textContent = "No prediction yet.";
+    });
+
+    async function uploadCSV() {
+      if (!fileInput.files.length) {
+        alert("Please select a CSV file.");
+        return;
+      }
+
+      predictBtn.disabled = true;
+      resultArea.textContent = "Predicting...";
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/predict_csv", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) {
+          throw new Error(`Prediction failed: ${res.status} ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        // Show predictions in a nice list format
+        if(data.predictions && data.predictions.length) {
+          resultArea.textContent = data.predictions.map((p, i) => `Row ${i+1}: ${p}`).join("\n");
+        } else {
+          resultArea.textContent = "No predictions returned.";
+        }
+      } catch (err) {
+        resultArea.textContent = "Error: " + err.message;
+      } finally {
+        predictBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
